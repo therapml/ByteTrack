@@ -56,6 +56,6 @@ private:
 
     vector<STrack>            tracked_stracks;
     vector<STrack>            lost_stracks;
-    vector<STrack>            removed_stracks;
+    // vector<STrack>            removed_stracks;
     byte_kalman::KalmanFilter kalman_filter;
 };
