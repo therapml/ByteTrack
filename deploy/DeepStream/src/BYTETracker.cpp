@@ -16,6 +16,7 @@ BYTETracker::~BYTETracker()
 
 vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
 {
+    cout << "\n=== Frame " << this->frame_id + 1 << " ===\n";
 
     ////////////////// Step 1: Get detections //////////////////
     this->frame_id++;
@@ -35,6 +36,16 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
     vector<STrack *> tracked_stracks;
     vector<STrack *> strack_pool;
     vector<STrack *> r_tracked_stracks;
+
+    cout << "\nInitial State:";
+    cout << "\nTracked stracks (" << this->tracked_stracks.size() << "): ";
+    for(const auto& track : this->tracked_stracks) {
+        cout << track.track_id << " ";
+    }
+    cout << "\nLost stracks (" << this->lost_stracks.size() << "): ";
+    for(const auto& track : this->lost_stracks) {
+        cout << track.track_id << " ";
+    }
 
     if (nvObjects.size() > 0)
     {
@@ -60,6 +71,10 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
         }
     }
 
+    // cout << "\n\nAfter Detection Creation:";
+    // cout << "\nHigh score detections: " << detections.size();
+    // cout << "\nLow score detections: " << detections_low.size();
+
     // Add newly detected tracklets to tracked_stracks
     for (int i = 0; i < this->tracked_stracks.size(); i++)
     {
@@ -68,6 +83,10 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
         else
             tracked_stracks.push_back(&this->tracked_stracks[i]);
     }
+
+    // cout << "\n\nTrack Classifications:";
+    // cout << "\nUnconfirmed tracks: " << unconfirmed.size();
+    // cout << "\nConfirmed tracks: " << tracked_stracks.size();
 
     ////////////////// Step 2: First association, with IoU //////////////////
     strack_pool = joint_stracks(tracked_stracks, this->lost_stracks);
@@ -80,6 +99,11 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
     vector<vector<int>> matches;
     vector<int> u_track, u_detection;
     linear_assignment(dists, dist_size, dist_size_size, match_thresh, matches, u_track, u_detection);
+
+    // cout << "\n\nFirst Association Results:";
+    // cout << "\nMatched pairs: " << matches.size();
+    // cout << "\nUnmatched tracks: " << u_track.size();
+    // cout << "\nUnmatched detections: " << u_detection.size();
 
     for (int i = 0; i < matches.size(); i++)
     {
@@ -96,6 +120,16 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
             refind_stracks.push_back(*track);
         }
     }
+
+    // cout << "\n\nAfter First Association:";
+    // cout << "\nActivated stracks (" << activated_stracks.size() << "): ";
+    // for(const auto& track : activated_stracks) {
+    //     cout << track.track_id << " ";
+    // }
+    // cout << "\nRefind stracks (" << refind_stracks.size() << "): ";
+    // for(const auto& track : refind_stracks) {
+    //     cout << track.track_id << " ";
+    // }
 
     ////////////////// Step 3: Second association, using low score dets //////////////////
     for (int i = 0; i < u_detection.size(); i++)
@@ -120,6 +154,11 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
     u_track.clear();
     u_detection.clear();
     linear_assignment(dists, dist_size, dist_size_size, 0.5, matches, u_track, u_detection);
+
+    // cout << "\n\nSecond Association Results:";
+    // cout << "\nMatched pairs: " << matches.size();
+    // cout << "\nUnmatched tracks: " << u_track.size();
+    // cout << "\nUnmatched detections: " << u_detection.size();
 
     for (int i = 0; i < matches.size(); i++)
     {
@@ -147,6 +186,20 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
         }
     }
 
+    // cout << "\n\nAfter Second Association:";
+    // cout << "\nTotal activated stracks (" << activated_stracks.size() << "): ";
+    // for(const auto& track : activated_stracks) {
+    //     cout << track.track_id << " ";
+    // }
+    // cout << "\nTotal refind stracks (" << refind_stracks.size() << "): ";
+    // for(const auto& track : refind_stracks) {
+    //     cout << track.track_id << " ";
+    // }
+    // cout << "\nNewly lost stracks (" << lost_stracks.size() << "): ";
+    // for(const auto& track : lost_stracks) {
+    //     cout << track.track_id << " ";
+    // }
+
     // Deal with unconfirmed tracks, usually tracks with only one beginning frame
     detections.clear();
     detections.assign(detections_cp.begin(), detections_cp.end());
@@ -158,6 +211,11 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
     vector<int> u_unconfirmed;
     u_detection.clear();
     linear_assignment(dists, dist_size, dist_size_size, 0.7, matches, u_unconfirmed, u_detection);
+
+    // cout << "\n\nUnconfirmed Tracks Association:";
+    // cout << "\nMatched pairs: " << matches.size();
+    // cout << "\nUnmatched unconfirmed: " << u_unconfirmed.size();
+    // cout << "\nUnmatched detections: " << u_detection.size();
 
     for (int i = 0; i < matches.size(); i++)
     {
@@ -192,6 +250,11 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
         }
     }
 
+    cout << "\nRemoved stracks (" << removed_stracks.size() << "): ";
+    for(const auto& track : removed_stracks) {
+        cout << track.track_id << " ";
+    }
+
     for (int i = 0; i < this->tracked_stracks.size(); i++)
     {
         if (this->tracked_stracks[i].state == TrackState::Tracked)
@@ -205,6 +268,12 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
     this->tracked_stracks = joint_stracks(this->tracked_stracks, activated_stracks);
     this->tracked_stracks = joint_stracks(this->tracked_stracks, refind_stracks);
 
+    cout << "\nIntermediate State After all the associations happened:";
+    cout << "\nTracked stracks (" << this->tracked_stracks.size() << "): ";
+    for(const auto& track : this->tracked_stracks) {
+        cout << track.track_id << " ";
+    }
+
     // std::cout << activated_stracks.size() << std::endl;
 
     this->lost_stracks = sub_stracks(this->lost_stracks, this->tracked_stracks);
@@ -215,6 +284,11 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
 
     // Deleting the removed_stracks from this->lost_stracks
     this->lost_stracks = sub_stracks(this->lost_stracks, removed_stracks);
+
+    cout << "\nLost stracks (" << this->lost_stracks.size() << "): ";
+    for(const auto& track : this->lost_stracks) {
+        cout << track.track_id << " ";
+    }
 
     /* 
     this->lost_stracks = sub_stracks(this->lost_stracks, this->removed_stracks);
@@ -242,6 +316,20 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
         }
     }
 
+    cout << "\n\nFinal State:";
+    cout << "\nTracked stracks (" << this->tracked_stracks.size() << "): ";
+    for(const auto& track : this->tracked_stracks) {
+        cout << track.track_id << " ";
+    }
+    cout << "\nLost stracks (" << this->lost_stracks.size() << "): ";
+    for(const auto& track : this->lost_stracks) {
+        cout << track.track_id << " ";
+    }
+    cout << "\nOutput stracks (" << output_stracks.size() << "): ";
+    for(const auto& track : output_stracks) {
+        cout << track.track_id << " ";
+    }
+
     // clean up old objects
     vector<STrack> filtered_output_stracks;
     std::copy_if(output_stracks.begin(),
@@ -252,5 +340,12 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
                      return track.associatedObjectIn != NULL &&
                             track.associatedObjectIn->classId == 0;
                  });
+
+    cout << "\nFiltered output stracks (" << filtered_output_stracks.size() << "): ";
+    for(const auto& track : filtered_output_stracks) {
+        cout << track.track_id << " ";
+    }
+    cout << "\n----------------------------------------\n";
+
     return filtered_output_stracks;
 }
