@@ -6,6 +6,11 @@ NvMOTContext::NvMOTContext(const NvMOTConfig &configIn, NvMOTConfigResponse &con
     configResponse.summaryStatus = NvMOTConfigStatus_OK;
 }
 
+NvMOTContext::~NvMOTContext() {
+    // Clear all trackers
+    byteTrackerMap.clear();
+}
+
 NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTrackedObjBatch *pTrackedObjectsBatch) {
     for (uint streamIdx = 0; streamIdx < pTrackedObjectsBatch->numFilled; streamIdx++){
         NvMOTTrackedObjList   *trackedObjList = &pTrackedObjectsBatch->list[streamIdx];
@@ -29,27 +34,28 @@ NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTr
 
         std::vector<STrack> outputTracks = byteTrackerMap.at(frame->streamID)->update(nvObjects);
 
-        NvMOTTrackedObj *trackedObjs = new NvMOTTrackedObj[512];
+        std::unique_ptr<NvMOTTrackedObj[]> trackedObjs(new NvMOTTrackedObj[512]); // Consider using smart pointers for managing the array
         int             filled       = 0;
 
         for (STrack &sTrack: outputTracks) {
-            std::vector<float> tlwh        = sTrack.original_tlwh;
-            NvMOTRect          motRect{tlwh[0], tlwh[1], tlwh[2], tlwh[3]};
-            NvMOTTrackedObj    *trackedObj             = new NvMOTTrackedObj;
-            trackedObj->classId                        = 0;
-            trackedObj->trackingId                     = (uint64_t) sTrack.track_id;
-            trackedObj->bbox                           = motRect;
-            trackedObj->confidence                     = 1;
-            trackedObj->age                            = (uint32_t) sTrack.tracklet_len;
-            trackedObj->associatedObjectIn             = sTrack.associatedObjectIn;
-            trackedObj->associatedObjectIn->doTracking = true;
-            trackedObjs[filled++]                      = *trackedObj;
+            std::vector<float> tlwh = sTrack.original_tlwh;
+            NvMOTRect motRect{tlwh[0], tlwh[1], tlwh[2], tlwh[3]};
+            
+            // Directly construct in the array, no need for separate allocation
+            trackedObjs[filled].classId = 0;
+            trackedObjs[filled].trackingId = (uint64_t)sTrack.track_id;
+            trackedObjs[filled].bbox = motRect;
+            trackedObjs[filled].confidence = 1;
+            trackedObjs[filled].age = (uint32_t)sTrack.tracklet_len;
+            trackedObjs[filled].associatedObjectIn = sTrack.associatedObjectIn;
+            trackedObjs[filled].associatedObjectIn->doTracking = true;
+            filled++;
         }
 
         trackedObjList->streamID     = frame->streamID;
         trackedObjList->frameNum     = frame->frameNum;
         trackedObjList->valid        = true;
-        trackedObjList->list         = trackedObjs;
+        trackedObjList->list         = trackedObjs.release();  // Transfer ownership
         trackedObjList->numFilled    = filled;
         trackedObjList->numAllocated = 512;
     }
