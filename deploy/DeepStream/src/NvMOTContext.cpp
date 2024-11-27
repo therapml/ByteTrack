@@ -43,25 +43,14 @@ NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTr
         // Get output tracks
         std::vector<STrack> outputTracks = byteTrackerMap.at(frame->streamID)->update(nvObjects);
 
-        for (int i = 0; i < NvMOTContext::MAX_TRACKED_OBJECTS; i++)
-        {
-            // Explicitly handle any potential memory management
-            if (this->trackedObjectsPool[i].associatedObjectIn)
-            {
-                // If you need to do any cleanup on associatedObjectIn
-                this->trackedObjectsPool[i].associatedObjectIn = nullptr;
-            }
-            // Reset other fields
-            this->trackedObjectsPool[i] = NvMOTTrackedObj();
-        }
+        // Resets the trackedObjectsPool array
+        this->resetTrackedObjectsPool();
 
         int filled = 0;
-
-        // Populate the pool
         for (STrack &sTrack : outputTracks)
         {
             if (filled >= NvMOTContext::MAX_TRACKED_OBJECTS)
-                break; // Prevent buffer overflow
+                break;
 
             std::vector<float> tlwh = sTrack.original_tlwh;
             NvMOTRect motRect{tlwh[0], tlwh[1], tlwh[2], tlwh[3]};
@@ -86,10 +75,11 @@ NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTr
         trackedObjList->numFilled = filled;
         trackedObjList->numAllocated = NvMOTContext::MAX_TRACKED_OBJECTS;
     }
+
+    return NvMOTStatus_OK;
 }
 
-NvMOTStatus NvMOTContext::processFramePast(const NvMOTProcessParams *params,
-                                           NvDsPastFrameObjBatch *pPastFrameObjectsBatch)
+NvMOTStatus NvMOTContext::processFramePast(const NvMOTProcessParams *params, NvDsPastFrameObjBatch *pPastFrameObjectsBatch)
 {
     return NvMOTStatus_OK;
 }
@@ -103,3 +93,16 @@ NvMOTStatus NvMOTContext::removeStream(const NvMOTStreamId streamIdMask)
     }
     return NvMOTStatus_OK;
 }
+
+void NvMOTContext::resetTrackedObjectsPool()
+{
+    for (int i = 0; i < NvMOTContext::MAX_TRACKED_OBJECTS; i++)
+    {
+        if (this->trackedObjectsPool[i].associatedObjectIn)
+        {
+            this->trackedObjectsPool[i].associatedObjectIn = nullptr;
+        }
+
+        this->trackedObjectsPool[i] = NvMOTTrackedObj();
+    }
+} 

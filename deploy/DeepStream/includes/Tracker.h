@@ -53,6 +53,11 @@ public:
      */
     NvMOTStatus removeStream(const NvMOTStreamId streamIdMask);
 
+    /**
+     * Resets the trackedObjectsPool array before every use 
+    */
+    void resetTrackedObjectsPool();
+
 protected:
 
     /**
