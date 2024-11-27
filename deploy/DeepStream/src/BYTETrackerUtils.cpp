@@ -29,7 +29,6 @@ vector<STrack> BYTETracker::joint_stracks(vector<STrack> &tlista, vector<STrack>
     vector<STrack> res;
     for (int i = 0; i < tlista.size(); i++)
     {
-        // exists.insert(pair<int, int>(tlista[i].track_id, 1));
         exists[tlista[i].track_id] = 1;
         res.push_back(tlista[i]);
     }
@@ -71,8 +70,7 @@ vector<STrack> BYTETracker::sub_stracks(vector<STrack> &tlista, vector<STrack> &
     return res;
 }
 
-void BYTETracker::remove_duplicate_stracks(vector<STrack> &resa, vector<STrack> &resb, vector<STrack> &stracksa,
-                                           vector<STrack> &stracksb)
+void BYTETracker::remove_duplicate_stracks(vector<STrack> &resa, vector<STrack> &resb, vector<STrack> &stracksa, vector<STrack> &stracksb)
 {
     vector<vector<float>> pdist = iou_distance(stracksa, stracksb);
     vector<pair<int, int>> pairs;
@@ -118,8 +116,7 @@ void BYTETracker::remove_duplicate_stracks(vector<STrack> &resa, vector<STrack> 
 }
 
 void BYTETracker::linear_assignment(vector<vector<float>> &cost_matrix, int cost_matrix_size, int cost_matrix_size_size,
-                                    float thresh,
-                                    vector<vector<int>> &matches, vector<int> &unmatched_a, vector<int> &unmatched_b)
+                                    float thresh, vector<vector<int>> &matches, vector<int> &unmatched_a, vector<int> &unmatched_b)
 {
     if (cost_matrix.size() == 0)
     {
@@ -205,8 +202,7 @@ vector<vector<float>> BYTETracker::ious(vector<vector<float>> &atlbrs, vector<ve
     return ious;
 }
 
-vector<vector<float>>
-BYTETracker::iou_distance(vector<STrack *> &atracks, vector<STrack> &btracks, int &dist_size, int &dist_size_size)
+vector<vector<float>> BYTETracker::iou_distance(vector<STrack *> &atracks, vector<STrack> &btracks, int &dist_size, int &dist_size_size)
 {
     vector<vector<float>> cost_matrix;
     if (atracks.size() * btracks.size() == 0)
@@ -405,7 +401,6 @@ double BYTETracker::lapjv(const vector<vector<float>> &cost, vector<int> &rowsol
             {
                 if (rowsol[i] != -1)
                 {
-                    // cout << i << "\t" << rowsol[i] << "\t" << cost_ptr[i][rowsol[i]] << endl;
                     opt += cost_ptr[i][rowsol[i]];
                 }
             }
