@@ -38,7 +38,9 @@ NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTr
 
         // Prepare tracker
         if (byteTrackerMap.find(frame->streamID) == byteTrackerMap.end())
-            byteTrackerMap.insert(std::pair<uint64_t, std::shared_ptr<BYTETracker>>(frame->streamID, std::make_shared<BYTETracker>(15, 30)));
+            byteTrackerMap.insert(std::pair<uint64_t, 
+                                  std::shared_ptr<BYTETracker>>(frame->streamID, std::make_shared<BYTETracker>(this->frameRate, this->trackBuffer))
+                                );
 
         // Get output tracks
         std::vector<STrack> outputTracks = byteTrackerMap.at(frame->streamID)->update(nvObjects);

@@ -2,12 +2,17 @@
 
 BYTETracker::BYTETracker(int frame_rate, int track_buffer)
 {
-    // BYTETracker uses 0.6 as detection_score_threshold(track_thres) for separating high and low detection boxes
+    /*
+        BYTETracker paper chose 0.6 as detection_score_threshold(track_thres)
+        for separating high and low detection boxes
+    */
+    
     track_thresh = 0.6; 
     high_thresh = 0.2;
     match_thresh = 0.8;
     frame_id = 0;
-    max_time_lost = 5 * 3; // Frame rate 5 FPS, Wait for 3 seconds before removing the lost stracks
+
+    max_time_lost = int(frame_rate / 30.0 * track_buffer);
 }
 
 BYTETracker::~BYTETracker()
@@ -212,17 +217,6 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects)
 
     // Deleting the removed_stracks from this->lost_stracks
     this->lost_stracks = sub_stracks(this->lost_stracks, removed_stracks);
-
-    /* 
-    this->lost_stracks = sub_stracks(this->lost_stracks, this->removed_stracks);
-    for (int i = 0; i < removed_stracks.size(); i++)
-    {
-        this->removed_stracks.push_back(removed_stracks[i]);
-    } 
-    
-    N.B.: This portion is commented because we will remove all the removed stracks rather than storing them in another vector this->removed_stracks
-            to prevent memory leak.
-    */
 
     remove_duplicate_stracks(resa, resb, this->tracked_stracks, this->lost_stracks);
 
